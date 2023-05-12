@@ -1,4 +1,5 @@
 # hockey_game_MicroBit
+A toy project for JavaScript practice
 A hockey game made using Javascript in micro:bit environment
 
 
