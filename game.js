@@ -1,4 +1,3 @@
-
 // Classes
 class balls {
     timing: number
@@ -46,7 +45,10 @@ class balls {
         led.unplot(start, 0)
         if (way == 1) way = 2
         if (way == -1) way = 1
-        radio.sendString("SB" + start.toString() + way.toString() + speed.toString() + " " + gameRoom.strRoomCode)
+        for (let i = 0; i < 6; i++) {
+            radio.sendString("SB" + start.toString() + way.toString() + speed.toString() + " " + gameRoom.strRoomCode)
+            basic.pause(10)
+        }
     }
     fall(way: number, start: number, speed: number) {
         if (player.playing == false) return
@@ -72,35 +74,77 @@ class balls {
         basic.pause(50)
         if (player.pLocation != start) led.unplot(start, 4)
         if (this.hited == false) {
-            radio.sendString("Score " + gameRoom.strRoomCode)
-            if (gameRoom.state == "PlayerFirst") gameRoom.scoreP("Second")
-            else gameRoom.scoreP("First")
+            if (gameRoom.state == "PF" || gameRoom.state == "PS") {
+                radio.sendString("Score " + gameRoom.strRoomCode)
+                if (gameRoom.state == "PF") gameRoom.scoreP("Second")
+                else gameRoom.scoreP("First")
+            }
         }
     }
 }
-
-
 class games {
     state: string
     roomCode: number
     scoreRed: number
     scoreBlue: number
 
+    page: number
+
     constructor() {
         radio.setGroup(148)
         this.roomCode = -1
         this.scoreRed = 0
         this.scoreBlue = 0
-        this.state = "None"
+        this.state = "N"
+
+        this.page = 0
+        this.showPage()
     }
     get strRoomCode() {
         return this.roomCode.toString()
     }
+
+    showPage() {
+        if (this.page == 0) {
+            basic.showLeds(`
+            . . # . .
+            . . # . .
+            # . # . #
+            # # # # #
+            . . # . .
+            `)
+        }
+        else {
+            basic.showLeds(`
+            . # # # .
+            # . . . #
+            # . # . #
+            # . . . #
+            . # # # .
+            `)
+        }
+    }
+
+    practice() {
+        basic.clearScreen()
+        basic.pause(500)
+        this.state = "pct"
+        player.pLocation = 2
+        led.plot(2, 4)
+        player.playing = true
+        while (this.state == "pct") {
+            ball.fall(randint(-1, 1), randint(0, 4), randint(180, 600))
+            basic.pause(500)
+        }
+
+    }
+
+
     stop() {
         this.roomCode = -1
         this.scoreBlue = 0
         this.scoreRed = 0
-        this.state = "None"
+        this.state = "N"
     }
 
     matchmaking() {
@@ -116,9 +160,12 @@ class games {
                 radio.sendString("Created " + gameRoom.strRoomCode)
                 basic.pause(1000)
             }
-            if (this.roomCode == -1) {
+            basic.pause(3000)
+            if (this.state == "Created") {
                 basic.showString("Failed")
-                ledState = "Finish"
+                this.roomCode = -1
+                this.state = "N"
+                this.showPage()
             }
             return
         }
@@ -129,15 +176,17 @@ class games {
             this.scoreRed += 1
 
             if (this.scoreRed == 4) {
-                if (gameRoom.state == "PlayerFirst") {
+                if (gameRoom.state == "PF") {
                     stop()
                     soundState = "win"
                     basic.showString("You Win!")
+                    gameRoom.showPage()
                 }
                 else {
                     stop()
                     soundState = "lose"
                     basic.showString("You Lose!")
+                    gameRoom.showPage()
                 }
             }
             else {
@@ -152,7 +201,7 @@ class games {
             this.scoreBlue += 1
 
             if (this.scoreBlue == 4) {
-                if (gameRoom.state == "PlayerSecond") {
+                if (gameRoom.state == "PS") {
                     stop()
                     soundState = "win"
                     basic.showString("You Win!")
@@ -174,8 +223,6 @@ class games {
 
     }
 }
-
-
 class players {
     playing: boolean
     swingCool: boolean
@@ -194,7 +241,6 @@ class players {
     start() {
         this.playing = true
         led.plotBrightness(this.pLocation, 4, this.pBright)
-        console.log(gameRoom.state)
     }
     stop() {
         this.playing = false
@@ -232,10 +278,10 @@ class players {
         led.plotBrightness(this.pLocation, 4, this.pBright)
     }
 }
+
 const player = new players();
 const ball = new balls();
 const gameRoom = new games();
-
 
 function soundCustom(ty: string) {
     switch (ty) {
@@ -261,7 +307,7 @@ function soundCustom(ty: string) {
             break
     }
 }
-//Show LED
+// Show LED
 function ledCustom(ty: string) {
     switch (ty) {
         case "findRoom":
@@ -273,7 +319,7 @@ function ledCustom(ty: string) {
             . . . . .
             `)
             basic.pause(500)
-            if (ledState == "None") return
+            if (ledState == "N") return
             basic.showLeds(`
             . . . . .
             . # . # .
@@ -288,22 +334,22 @@ function ledCustom(ty: string) {
                 basic.showNumber(k)
                 music.playTone(330, music.beat(BeatFraction.Quarter))
             }
+
             soundState = "countdownstart"
             ledState = "Finish"
+            player.pLocation = 2
             break
         case "Score":
             player.pLocation = -2
             basic.clearScreen()
             basic.showString(gameRoom.scoreRed.toString() + ":" + gameRoom.scoreBlue.toString())
-            ledState = "None"
+            ledState = "N"
 
             break
         case "Finish":
             basic.clearScreen()
-            ledState = "None"
+            ledState = "N"
             break
-        default:
-
     }
 }
 
@@ -312,7 +358,6 @@ function stop() {
     player.stop()
     gameRoom.stop()
 }
-
 // get state of Room or Game variables ( text parsing )
 function getRoomState(text: string) {
     tmp = ""
@@ -324,7 +369,6 @@ function getRoomState(text: string) {
     }
     return tmp
 }
-
 
 // get RoomCode of Room ( text parsing )
 function getRoomCode(text: string) {
@@ -343,6 +387,9 @@ function getRoomCode(text: string) {
 // Swing
 input.onButtonPressed(Button.AB, function () {
     // roll > 25 : right   roll < -25 : left   else : front
+    if (gameRoom.state != "PF" && gameRoom.state != "PS" && gameRoom.state != "pct") {
+        return
+    }
     if (player.swingCool == false) {
         player.swingCool = true
         player.pBright = 30
@@ -357,87 +404,98 @@ input.onButtonPressed(Button.AB, function () {
     }
 })
 
+
 // radio communication
 radio.onReceivedString(function (receivedString) {
     if (gameRoom.state == "Finding") {
         // gameRoom Find action
         if (getRoomState(receivedString) == "Created") {
             gameRoom.roomCode = getRoomCode(receivedString)
-            gameRoom.state = "ReadyFirst"
+            gameRoom.state = "RF"
             ledState = "Finish"
             radio.sendString("Join " + gameRoom.roomCode.toString())
             basic.pause(50)
             ledState = "countdown"
             basic.pause(6000)
             player.start()
-            gameRoom.state = "PlayerFirst"
+            gameRoom.state = "PF"
         }
     } else if (gameRoom.state == "Created") {
         // a player joiend your room
         if (getRoomState(receivedString) == "Join") {
             if (getRoomCode(receivedString) == gameRoom.roomCode) {
-                gameRoom.state = "ReadySecond"
+                gameRoom.state = "RS"
                 ledState = "Finish"
                 basic.pause(50)
                 ledState = "countdown"
                 basic.pause(6000)
                 player.start()
-                gameRoom.state = "PlayerSecond"
+                gameRoom.state = "PS"
                 basic.pause(500)
                 ball.fall(randint(-1, 1), randint(0, 4), 500)
             }
         }
     } else if (getRoomCode(receivedString) == gameRoom.roomCode) {
-        if (getRoomState(receivedString) == "Score") {
-            if (gameRoom.state == "PlayerFirst") {
-                gameRoom.scoreP("First")
-            } else {
-                gameRoom.scoreP("Second")
-            }
-            basic.pause(1500)
-            ball.fall(randint(-1, 1), randint(0, 4), 550)
-        } else {
-            ball.sendBall(receivedString)
-        }
+        gotsnd = receivedString
     }
 })
 
 // Button Event
 input.onLogoEvent(TouchButtonEvent.Pressed, function () {
-    if (eventcool == true) {
+    if (gameRoom.state == "pct") {
+        gameRoom.state = "N"
+        player.playing = false
+        player.pLocation = -5
+        basic.pause(2450)
+        gameRoom.showPage()
         return
     }
-    if (gameRoom.state == "None") {
-        eventcool = true
+    if (eventcool != 0) {
+        return
+    }
+    if (gameRoom.state == "N") {
+        if (gameRoom.page == 0) {
+            eventcool = 1
+        } else {
+            eventcool = 2
+        }
     }
 })
+
 input.onButtonPressed(Button.A, function () {
     if (player.playing == true) {
         player.move(player.pLocation, -1)
+    } else {
+        if (gameRoom.state == "N") {
+            gameRoom.page = Math.abs(gameRoom.page - 1) % 2
+            gameRoom.showPage()
+        }
     }
 })
+
+
 input.onButtonPressed(Button.B, function () {
     if (player.playing == true) {
         player.move(player.pLocation, 1)
+    } else {
+        if (gameRoom.state == "N") {
+            gameRoom.page = Math.abs(gameRoom.page + 1) % 2
+            gameRoom.showPage()
+        }
     }
 })
 
+// supporting make afterimage of balls
+function makeShadow (shadowNum: number) {
+    if (shadow[shadowNum] != 0) {
+        music.playTone(262 + shadowNum * 20, music.beat(BeatFraction.Sixteenth))
+        shadowBall(shadowNum, shadow[shadowNum])
+    }
+    basic.pause(2)
+}
 
-let bright = 0
-let codchg = false
-let tmp = ""
-let eventcool = false
-let tmp2 = ""
-let ledState = ""
-let shadow: number[] = []
-let soundState = "None"
-ledState = "None"
-
-
-
-
-// Make Afterimage 
-function shadowBall(dNum: number, location: number) {
+// Make Afterimage
+function shadowBall (dNum: number, location: number) {
     shadow[dNum] = 0
     bright = 240
     while (bright >= 1) {
@@ -451,53 +509,60 @@ function shadowBall(dNum: number, location: number) {
     }
     led.unplot(Math.idiv(location, 10) - 1, location % 10)
 }
-// supporting make afterimage of balls
-function makeShadow(shadowNum: number) {
-    if (shadow[shadowNum] != 0) {
-        music.playTone(262 + shadowNum * 20, music.beat(BeatFraction.Sixteenth))
-        shadowBall(shadowNum, shadow[shadowNum])
-    }
-    basic.pause(2)
-}
+
+let bright = 0
+let codchg = false
+let tmp = ""
+let eventcool = 0
+let shadow: number[] = []
+let ledState = ""
+let tmp2 = ""
+
+let soundState = "N"
+let gotsnd = "None"
+ledState = "N"
 shadow = [
-    0,
-    0,
-    0,
-    0
+0,
+0,
+0,
+0
 ]
+
 loops.everyInterval(2, function () {
     makeShadow(0)
 })
+
 loops.everyInterval(2, function () {
     makeShadow(1)
 })
+
 loops.everyInterval(2, function () {
     makeShadow(2)
 })
+
 loops.everyInterval(2, function () {
     makeShadow(3)
 })
 
 
-
-//show LED
+// show LED
 basic.forever(function () {
-    if (ledState != "None") {
+    if (ledState != "N") {
         ledCustom(ledState)
     }
     basic.pause(2)
 })
 
-//Background Sound
+// Background Sound
 basic.forever(function () {
-    if (soundState != "None") {
+    if (soundState != "N") {
         soundCustom(soundState)
-        soundState = "None"
+        soundState = "N"
     }
     basic.pause(2)
 })
 
-//Swing Cooldown
+// Swing Cooldown
 basic.forever(function () {
     if (player.swingCool == true) {
         player.swingMotion()
@@ -508,17 +573,44 @@ basic.forever(function () {
 // Check Player hit ball
 basic.forever(function () {
     if (player.swingSuccess != -5) {
-        ball.go(player.swingSuccess, player.pLocation, 150 + Math.abs(40 - ball.timing) * 11)
+        if (gameRoom.state != "pct") {
+            ball.go(player.swingSuccess, player.pLocation, 150 + Math.abs(40 - ball.timing) * 11)
+        } else {
+            soundState = "score"
+        }
         player.swingSuccess = -5
     }
     basic.pause(5)
 })
 
-// Match Making 
+// Match Making
 loops.everyInterval(5, function () {
-    if (eventcool == true) {
+    if (eventcool == 1) {
         gameRoom.matchmaking()
         basic.pause(500)
-        eventcool = false
+        eventcool = 0
+    } else if (eventcool == 2) {
+        eventcool = 0
+        gameRoom.practice()
+        basic.pause(500)
+    }
+})
+
+// Sended Ball
+loops.everyInterval(10, function () {
+    if (gotsnd != "None"){
+        if (getRoomState(gotsnd) == "Score") {
+            if (gameRoom.state == "PF") {
+                gameRoom.scoreP("First")
+            } else {
+                gameRoom.scoreP("Second")
+            }
+            basic.pause(1500)
+            ball.fall(randint(-1, 1), randint(0, 4), 550)
+        } else {
+            ball.sendBall(gotsnd)
+        }
+        basic.pause(200)
+        gotsnd = "None"
     }
 })
