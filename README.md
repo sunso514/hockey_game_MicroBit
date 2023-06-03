@@ -14,5 +14,5 @@ Micro:Bit의 기울기에 따라 공이 나아가는 방향을 조정할 수 있
 
 4점을 먼저 채운 플레이어가 승리하며 승리 후 게임 방에서 나가집니다.
 
-자세한 설명은 노션 페이지를 참고하세요.
+자세한 설명은 노션 페이지를 참고하세요.  
 https://motley-gerbera-e11.notion.site/Micro-hockey-f4a3fc4e235f45e19d254403f7d8f48c?pvs=4
