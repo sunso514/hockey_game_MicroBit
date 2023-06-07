@@ -164,6 +164,7 @@ class games {
             if (this.state == "Created") {
                 basic.showString("Failed")
                 this.roomCode = -1
+                ledState = "N"
                 this.state = "N"
                 this.showPage()
             }
@@ -443,9 +444,8 @@ radio.onReceivedString(function (receivedString) {
 // Button Event
 input.onLogoEvent(TouchButtonEvent.Pressed, function () {
     if (gameRoom.state == "pct") {
-        gameRoom.state = "N"
-        player.playing = false
-        player.pLocation = -5
+        player.stop()
+        gameRoom.stop()
         basic.pause(2450)
         gameRoom.showPage()
         return
@@ -486,7 +486,7 @@ input.onButtonPressed(Button.B, function () {
 })
 
 // supporting make afterimage of balls
-function makeShadow (shadowNum: number) {
+function makeShadow(shadowNum: number) {
     if (shadow[shadowNum] != 0) {
         music.playTone(262 + shadowNum * 20, music.beat(BeatFraction.Sixteenth))
         shadowBall(shadowNum, shadow[shadowNum])
@@ -495,7 +495,7 @@ function makeShadow (shadowNum: number) {
 }
 
 // Make Afterimage
-function shadowBall (dNum: number, location: number) {
+function shadowBall(dNum: number, location: number) {
     shadow[dNum] = 0
     bright = 240
     while (bright >= 1) {
@@ -522,10 +522,10 @@ let soundState = "N"
 let gotsnd = "None"
 ledState = "N"
 shadow = [
-0,
-0,
-0,
-0
+    0,
+    0,
+    0,
+    0
 ]
 
 loops.everyInterval(2, function () {
@@ -598,7 +598,7 @@ loops.everyInterval(5, function () {
 
 // Sended Ball
 loops.everyInterval(10, function () {
-    if (gotsnd != "None"){
+    if (gotsnd != "None") {
         if (getRoomState(gotsnd) == "Score") {
             if (gameRoom.state == "PF") {
                 gameRoom.scoreP("First")
